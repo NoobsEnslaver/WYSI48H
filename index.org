@@ -1,0 +1,18 @@
+#+ENCODING: KOI8-R
+#+LANGUAGE: RU
+#+AUTHOR: Jonathan Tang
+
+#+INCLUDE: "./chapters/chapter1.org" org-mode :minlevel 1
+#+INCLUDE: "./chapters/chapter2.org" org-mode :minlevel 1
+#+INCLUDE: "./chapters/chapter3.org" org-mode :minlevel 1
+#+INCLUDE: "./chapters/chapter4.org" org-mode :minlevel 1
+#+INCLUDE: "./chapters/chapter5.org" org-mode :minlevel 1
+# #+INCLUDE: "./chapters/chapter6.org" org-mode :minlevel 1
+# #+INCLUDE: "./chapters/chapter7.org" org-mode :minlevel 1
+# #+INCLUDE: "./chapters/chapter8.org" org-mode :minlevel 1
+# #+INCLUDE: "./chapters/chapter9.org" org-mode :minlevel 1
+# #+INCLUDE: "./chapters/chapter10.org" org-mode :minlevel 1
+# #+INCLUDE: "./appendix/apA.org" org-mode :minlevel 1
+# #+INCLUDE: "./appendix/apB.org" org-mode :minlevel 1
+# #+INCLUDE: "./appendix/apC.org" org-mode :minlevel 1
+# #+INCLUDE: "./appendix/apD.org" org-mode :minlevel 1
