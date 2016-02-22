@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="RU" xml:lang="RU">
 <head>
 <title>Пишем интерпретатор Scheme за 48 часов: боевое введение в Haskell</title>
-<!-- 2016-02-21 Sun 18:34 -->
+<!-- 2016-02-22 Mon 13:08 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Jonathan Tang" />
@@ -635,6 +635,148 @@ Haskell.
 <div class="outline-text-2" id="text-2">
 </div><div id="outline-container-sec-2-1" class="outline-3">
 <h3 id="sec-2-1"><span class="section-number-3">2.1</span> Простейший парсер</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Давайте попробуем написать очень простой синтаксический анализатор. Мы
+будем использовать библиотеку <a href="http://www.cs.uu.nl/~daan/download/parsec/parsec.html">Parsec</a> (Установите parsec, если вы еще
+не сделали этого, самостоятельно или в составе Haskell Platform.).
+</p>
+
+<p>
+Начнем мы с добавления следующей строки в секцию импорта:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-haskell"><span style="color: #8ac6f2; font-weight: bold;">import</span> <span style="color: #92a65e; font-weight: bold;">Text.ParserCombinators.Parsec</span> <span style="color: #8ac6f2; font-weight: bold;">hiding</span> (spaces)
+</pre>
+</div>
+
+<p>
+Это позволит нам использовать функции из библиотеки Parsec, за
+исключением функции spaces, потому что ее имя будет конфликтовать с
+функцией, которую мы определим чуть позднее.  
+</p>
+
+<p>
+Теперь определим синтаксический анализатор, который будет распознавать
+символы, разрешенные для определения идентификаторов в Scheme:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-haskell"><span style="color: #cae682;">symbol</span> <span style="color: #cae682;">::</span> <span style="color: #92a65e; font-weight: bold;">Parser</span> <span style="color: #92a65e; font-weight: bold;">Char</span>
+<span style="color: #cae682;">symbol</span> <span style="color: #cae682;">=</span> oneOf <span style="color: #95e454;">"!#$%&amp;|*+-/:&lt;=&gt;?@^_~"</span>
+</pre>
+</div>
+
+<p>
+Это еще один пример монады: в данном случае «дополнительная
+информация», которая скрыта, это информация о позиции в входном потоке
+данных, о предыдущей записи, о первом и последующих наборах и
+т. д. Parsec позаботится обо всем за нас. Нам нужно лишь
+воспользоваться функцией <a href="http://www.cs.uu.nl/~daan/download/parsec/parsec.html#oneOf">oneOf</a> из библиотеки Parsec, и она разберет
+символы в переданной ей строке. Parsec предоставляет множество готовых
+синтаксических анализаторов: например, <a href="http://www.cs.uu.nl/~daan/download/parsec/parsec.html#letter">letter</a> и <a href="http://www.cs.uu.nl/~daan/download/parsec/parsec.html#digit">digit</a>. Вы так же
+можете создавать более сложные синтаксические анализаторы из более
+простых.
+</p>
+
+<p>
+Определим функцию, которая будет вызывать наш синтаксический
+анализатор и отлавливать все возможные ошибки:
+</p>
+<div class="org-src-container">
+
+<pre class="src src-haskell"><span style="color: #cae682;">readExpr</span> <span style="color: #cae682;">::</span> <span style="color: #92a65e; font-weight: bold;">String</span> <span style="color: #cae682;">-&gt;</span> <span style="color: #92a65e; font-weight: bold;">String</span>
+<span style="color: #cae682;">readExpr</span> input <span style="color: #cae682;">=</span> <span style="color: #8ac6f2; font-weight: bold;">case</span> parse symbol <span style="color: #95e454;">"lisp"</span> input <span style="color: #8ac6f2; font-weight: bold;">of</span>
+  <span style="color: #92a65e; font-weight: bold;">Left</span> err <span style="color: #cae682;">-&gt;</span> <span style="color: #95e454;">"No match: "</span> <span style="color: #cae682;">++</span> show err
+  <span style="color: #92a65e; font-weight: bold;">Right</span> val <span style="color: #cae682;">-&gt;</span> <span style="color: #95e454;">"Found value"</span>
+</pre>
+</div>
+
+<p>
+Из сигнатуры функции вы можете видеть, что <code>readExpr</code> это функция (-&gt;)
+из String в String. Мы назвали параметр <code>input</code> и передали его дальше,
+вместе с синтаксическим анализатором <code>symbol</code>, определенным ранее, в
+функцию <a href="http://www.cs.uu.nl/~daan/download/parsec/parsec.html#parse">parse</a> из библиотеки Parsec. Второй параметр функции <code>nparse</code>
+это имя для передаваемых данных. Оно используется для вывода сообщений
+об ошибках.
+</p>
+
+<p>
+<code>parse</code> может вернуть либо разобранное значение, либо ошибку, так что
+нам нужно иметь возможность отлавливать ошибки. Следуя принятым в
+Haskell соглашениям, Parsec возвращает тип <a href="http://www.haskell.org/onlinereport/standard-prelude.html#$tEither">Either</a>, в котором
+конструктор <code>Left</code> используется для указания на ошибку, а конструктор
+<code>Right</code> для возврата нормального значения.
+</p>
+
+<p>
+Используем конструкцию <code>case...of</code>, чтобы проверить, какой результат
+вернула функция parse. Если мы получили значение Left (ошибка), то
+присваиваем ошибке имя <code>err</code> и возвращаем «No match» с текстовым
+представлением ошибки. Если же мы получили значение Right, то
+присваиваем значению имя <code>val</code> и, игнорируя его, возвращаем строку
+«Found value».
+</p>
+
+<p>
+Конструкция <code>case...of</code> это пример сравнения с шаблоном, которое мы
+рассмотрим значительно подробнее позднее.
+</p>
+
+<p>
+Напоследок, нам нужно изменить нашу функцию так, чтобы вызывать
+<code>readExpr</code> и выводить на печать результат (необходимо добавить <code>import
+System</code> в начале файла):
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-haskell"><span style="color: #cae682;">main</span> <span style="color: #cae682;">::</span> <span style="color: #92a65e; font-weight: bold;">IO</span> <span style="color: #92a65e; font-weight: bold;">()</span>
+<span style="color: #cae682;">main</span> <span style="color: #cae682;">=</span> <span style="color: #8ac6f2; font-weight: bold;">do</span> args <span style="color: #cae682;">&lt;-</span> getArgs
+          putStrLn (readExpr (args <span style="color: #cae682;">!!</span> 0))
+</pre>
+</div>
+
+<p>
+В итоге наша программа должна преобрести следующий вид:
+</p>
+<div class="org-src-container">
+<label class="org-src-name">Простейший парсер (simpleparser1.hs)</label>
+<pre class="src src-haskell"><span style="color: #8ac6f2; font-weight: bold;">module</span> <span style="color: #92a65e; font-weight: bold;">Main</span> <span style="color: #8ac6f2; font-weight: bold;">where</span>
+
+<span style="color: #8ac6f2; font-weight: bold;">import</span> <span style="color: #92a65e; font-weight: bold;">System.Environment</span>(getArgs)
+<span style="color: #8ac6f2; font-weight: bold;">import</span> <span style="color: #92a65e; font-weight: bold;">Text.ParserCombinators.Parsec</span> <span style="color: #8ac6f2; font-weight: bold;">hiding</span> (spaces)
+
+<span style="color: #cae682;">main</span><span style="color: #cae682;">::</span><span style="color: #92a65e; font-weight: bold;">IO()</span>
+<span style="color: #cae682;">main</span><span style="color: #cae682;">=</span> <span style="color: #8ac6f2; font-weight: bold;">do</span>
+  args <span style="color: #cae682;">&lt;-</span> getArgs
+  putStrLn (readExpr<span style="color: #cae682;">$</span> args <span style="color: #cae682;">!!</span> 0)
+
+<span style="color: #cae682;">symbol</span> <span style="color: #cae682;">::</span> <span style="color: #92a65e; font-weight: bold;">Parser</span> <span style="color: #92a65e; font-weight: bold;">Char</span>
+<span style="color: #cae682;">symbol</span> <span style="color: #cae682;">=</span> oneOf <span style="color: #95e454;">"!#$%&amp;|*+-/:&lt;=&gt;?@^_~"</span>
+
+<span style="color: #cae682;">readExpr</span> <span style="color: #cae682;">::</span> <span style="color: #92a65e; font-weight: bold;">String</span> <span style="color: #cae682;">-&gt;</span> <span style="color: #92a65e; font-weight: bold;">String</span>
+<span style="color: #cae682;">readExpr</span> input <span style="color: #cae682;">=</span> <span style="color: #8ac6f2; font-weight: bold;">case</span> parse symbol <span style="color: #95e454;">"lisp"</span> input <span style="color: #8ac6f2; font-weight: bold;">of</span>
+    <span style="color: #92a65e; font-weight: bold;">Left</span> err <span style="color: #cae682;">-&gt;</span> <span style="color: #95e454;">"No match: "</span> <span style="color: #cae682;">++</span> show err
+    <span style="color: #92a65e; font-weight: bold;">Right</span> val <span style="color: #cae682;">-&gt;</span> <span style="color: #95e454;">"Found value"</span>
+</pre>
+</div>
+
+<p>
+Теперь можно запустить нашу программу:
+</p>
+<pre class="example">
+[USER ~]$ ghc -o simple_parser simpleparser1.hs
+[USER ~]$ ./simple_parser $
+Found value
+[USER ~]$ ./simple_parser a
+No match: "lisp" (line 1, column 1):
+unexpected "a"
+</pre>
+</div>
 </div>
 
 <div id="outline-container-sec-2-2" class="outline-3">
@@ -705,7 +847,7 @@ Haskell.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Jonathan Tang</p>
-<p class="date">Created: 2016-02-21 Sun 18:34</p>
+<p class="date">Created: 2016-02-22 Mon 13:08</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.5.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

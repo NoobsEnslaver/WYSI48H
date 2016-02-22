@@ -1,6 +1,112 @@
 * Парсинг
 
 ** Простейший парсер
+Давайте попробуем написать очень простой синтаксический анализатор. Мы
+будем использовать библиотеку [[http://www.cs.uu.nl/~daan/download/parsec/parsec.html][Parsec]] (Установите parsec, если вы еще
+не сделали этого, самостоятельно или в составе Haskell Platform.).
+
+Начнем мы с добавления следующей строки в секцию импорта:
+
+#+begin_src haskell
+  import Text.ParserCombinators.Parsec hiding (spaces)
+#+end_src
+
+Это позволит нам использовать функции из библиотеки Parsec, за
+исключением функции spaces, потому что ее имя будет конфликтовать с
+функцией, которую мы определим чуть позднее.  
+
+Теперь определим синтаксический анализатор, который будет распознавать
+символы, разрешенные для определения идентификаторов в Scheme:
+
+#+begin_src haskell
+  symbol :: Parser Char
+  symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+#+end_src
+
+Это еще один пример монады: в данном случае «дополнительная
+информация», которая скрыта, это информация о позиции в входном потоке
+данных, о предыдущей записи, о первом и последующих наборах и
+т. д. Parsec позаботится обо всем за нас. Нам нужно лишь
+воспользоваться функцией [[http://www.cs.uu.nl/~daan/download/parsec/parsec.html#oneOf][oneOf]] из библиотеки Parsec, и она разберет
+символы в переданной ей строке. Parsec предоставляет множество готовых
+синтаксических анализаторов: например, [[http://www.cs.uu.nl/~daan/download/parsec/parsec.html#letter][letter]] и [[http://www.cs.uu.nl/~daan/download/parsec/parsec.html#digit][digit]]. Вы так же
+можете создавать более сложные синтаксические анализаторы из более
+простых.
+
+Определим функцию, которая будет вызывать наш синтаксический
+анализатор и отлавливать все возможные ошибки:
+#+begin_src haskell
+  readExpr :: String -> String
+  readExpr input = case parse symbol "lisp" input of
+    Left err -> "No match: " ++ show err
+    Right val -> "Found value"
+#+end_src
+
+Из сигнатуры функции вы можете видеть, что =readExpr= это функция (->)
+из String в String. Мы назвали параметр =input= и передали его дальше,
+вместе с синтаксическим анализатором =symbol=, определенным ранее, в
+функцию [[http://www.cs.uu.nl/~daan/download/parsec/parsec.html#parse][parse]] из библиотеки Parsec. Второй параметр функции =nparse=
+это имя для передаваемых данных. Оно используется для вывода сообщений
+об ошибках.
+
+=parse= может вернуть либо разобранное значение, либо ошибку, так что
+нам нужно иметь возможность отлавливать ошибки. Следуя принятым в
+Haskell соглашениям, Parsec возвращает тип [[http://www.haskell.org/onlinereport/standard-prelude.html#$tEither][Either]], в котором
+конструктор =Left= используется для указания на ошибку, а конструктор
+=Right= для возврата нормального значения.
+
+Используем конструкцию =case...of=, чтобы проверить, какой результат
+вернула функция parse. Если мы получили значение Left (ошибка), то
+присваиваем ошибке имя =err= и возвращаем «No match» с текстовым
+представлением ошибки. Если же мы получили значение Right, то
+присваиваем значению имя =val= и, игнорируя его, возвращаем строку
+«Found value».
+
+Конструкция =case...of= это пример сравнения с шаблоном, которое мы
+рассмотрим значительно подробнее позднее.
+
+Напоследок, нам нужно изменить нашу функцию так, чтобы вызывать
+=readExpr= и выводить на печать результат (необходимо добавить =import
+System= в начале файла):
+
+#+begin_src haskell
+  main :: IO ()
+  main = do args <- getArgs
+            putStrLn (readExpr (args !! 0))
+#+end_src
+
+В итоге наша программа должна преобрести следующий вид:
+#+CAPTION: Простейший парсер (simpleparser1.hs)
+#+begin_src haskell
+  module Main where
+
+  import System.Environment(getArgs)
+  import Text.ParserCombinators.Parsec hiding (spaces)
+
+  main::IO()
+  main= do
+    args <- getArgs
+    putStrLn (readExpr$ args !! 0)
+
+  symbol :: Parser Char
+  symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+
+  readExpr :: String -> String
+  readExpr input = case parse symbol "lisp" input of
+      Left err -> "No match: " ++ show err
+      Right val -> "Found value"
+
+#+end_src
+
+Теперь можно запустить нашу программу:
+#+BEGIN_EXAMPLE
+  [USER ~]$ ghc -o simple_parser simpleparser1.hs
+  [USER ~]$ ./simple_parser $
+  Found value
+  [USER ~]$ ./simple_parser a
+  No match: "lisp" (line 1, column 1):
+  unexpected "a"
+#+END_EXAMPLE
 
 ** Обрабатываем пробелы
 
